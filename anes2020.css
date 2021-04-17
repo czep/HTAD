@@ -1,0 +1,49 @@
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+Pro&display=swap');
+
+
+body {
+  font-family: 'Source Serif Pro', serif;
+}
+
+p {
+  font-size: 16px;
+}
+
+table.demotab td, table.demotab th {
+  padding: 0.5em;
+  vertical-align: center;
+  line-height: 1em;
+}
+
+.pctp {
+
+}
+
+.pctci {
+  font-size: 0.80em;
+  font-style: normal;
+  color: #999;
+}
+
+table.freqtab {
+  padding: 1.5em;
+}
+
+
+table.qtab caption, table.freqtab caption, table.demotab caption {
+  caption-side: top;
+  text-align: center;
+  color: inherit;
+  font-weight: bold;
+}
+
+.kable_wrapper {
+  margin: 0 auto;
+}
+
+table.kable_wrapper td {
+  padding-left: 2em;
+  padding-right: 2em;
+  padding-bottom: 2em;
+}
+

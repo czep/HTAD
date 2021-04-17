@@ -1,0 +1,1266 @@
+---
+title: "Exploratory Analysis with the 2020 ANES Pre-election Survey"
+author: Scott Czepiel
+date: "`r format(Sys.time(), '%d %b %Y')`"
+output:
+  html_document:
+    toc: true
+    theme: default
+    highlight: pygments
+    css: anes2020.css
+    mathjax: null
+    keep_md: true
+
+---
+
+```{r knitr_options, include=FALSE}
+# Command to generate this report:
+# R -e "rmarkdown::render('anes2020-pre.Rmd')"
+library(knitr)
+opts_chunk$set(fig.align='center', warning=FALSE, message=FALSE)
+opts_knit$set(progress = TRUE, verbose = TRUE)
+```
+
+# Helpful Links
+* [Latest version of this report](https://czep.net/pub/anes2020-pre.html)
+* [ANES home page](https://electionstudies.org/)
+* [Github repo for this report](https://github.com/czep/HTAD)
+
+# Introduction
+
+## About Exploratory Analysis
+
+Data analysis is an iterative process.  A tab deck such as this is typically the first real step in the process, after---and often during---cleaning.  The goal of an exploratory data analysis is not to come up with conclusions, but rather to come up with more questions.  In this stage we don't set out to "prove" anything, we study the data and use it for hypothesis generation.  This report doesn't formally constitute an analysis.  These are the raw tabs we would use as reference while continuing the analysis and digging deeper.  EDA gives you the "What" in data analysis---it establishes facts.  But it does not answer the all important question of "Why?"  After looking through this report, you should be asking yourself "Why?" over and over.  You will use those questions to generate hypotheses to explain what you see in these tabs.  It's the job of a further, more refined, analysis to answer those questions.
+
+This document is not about making value judgements[^4], this document is about establishing facts and asking questions.  Even though the subject matter is highly political, as analysts we must approach the work with a scientific mindset.  Our personal political views have no bearing on our approach to this analysis.  As we review the tabs, we make observations about the findings, but only interpret and speculate to the extent that we can raise questions to explore further.
+
+## About ANES
+
+The [American National Election Studies](https://electionstudies.org/) is a research survey conducted since 1948 to study public opinion and voting behavior in US presidential elections.  As a joint project between Stanford and the University of Michigan and funded by the National Science Foundation, the ANES is the most comprehensive and methodologically rigorous survey of political opinion available today.  In stark contrast to the slew of polls one encounters daily in various news media, the ANES is designed and conducted to extremely high standards and with a budget that allows for the collection of high quality data.  The skepticism one may justifiably hold regarding the polling industry is simply not applicable to the ANES.
+
+Although a full critique of the polling industry is rather tangential to the goals of this analysis, a brief outline of the methodological concerns involved is necessary in order to quickly defray the argument that ANES data can be dismissed due to an association with polls ("all polls are wrong, therefore the ANES data is wrong").  Most public opinion surveys operate with severe constraints of both time and budget that limit their validity.  To fulfill their primary objective of providing timely survey data for immediate publication, polls predominantly rely on telephone surveys conducted with Random Digit Dialing.  Historically, this has been the closest way of cheaply approximating a probability sample.  However, RDD response rates have plummeted to the low single digits[^1] and are continually declining while the proportion of the population reachable using this method is also declining.  With a budget of only a few dollars per completed interview, it is simply not possible to provide a quality representative sampling of the US population.
+
+This is not a blanket condemnation of an entire industry.  I have worked with many people in the polling industry, as well as its sibling industry of market research in which I personally spent many years, and it is full of smart people artfully solving complex problems.  The quality of polling varies greatly in this market and there are certainly many respectable research firms that invest in the rigor and science of their survey methodology.  Ultimately, however, I would argue that the time and budget constraints imposed by the market are incongruent with the goal of a representative sample.
+
+The dismal performance of the election polls of 2016---and sadly again in 2020---are not surprising because of these constraints.  Despite the fact that a lot of good work is being done to improve the predictive utility of the polls, notably among aggregators like [Fivethirtyeight](https://fivethirtyeight.com/features/the-death-of-polling-is-greatly-exaggerated/), the [GIGO](https://en.wikipedia.org/wiki/Garbage_in,_garbage_out) principle retains its rule, even at scale.  An aggregate of a hundred polls, each conducted hastily with a meager budget and a shaky methodology, will still suffer from the same stench as if there were only one.  This is not a problem that can be solved by developing fancier models using MRP.
+
+While the media organizations reporting these polls would certainly like for them to be accurate, they have little incentive to pay for a proper survey[^2].  There is no argument to be made that viewership or readership would be increased by investing in an expensive methodology when all their competitors are using the same cheap polls.  There is no downside to using the cheap polls because, everyone is doing it and after all, this is all guesswork, right?  The media will never do retrospectives on why their polls were wrong because by the time this comes to light the news cycle is on to something completely different. The unfortunate consequence of this race to the bottom is that now nobody trusts survey research, even when it's done right.
+
+My point is that the ANES is not subject to these flaws.  With a multi-million dollar annual budget, a trained staff, principal investigators who are leaders in their fields, constant refinement of their survey methodology and questionnaire design, and an organizational history dating back to 1948, the ANES is not in the same league as public opinion polls.  I emphasize this because the distrust in polls could be used as a shield to levy immediate criticism of the ANES data by anyone who may find results that disagrees with their ideological bent.  They could appeal to the now established distrust of polls to cast doubt on anyone who uses ANES data in their research, again: "all polls are wrong, therefore the ANES data is wrong".  This prologue is simply a preemptive warning that such an argument will not fly here.   You do not get to dismiss these data as "fake news" just because you find something you dislike.
+
+The ANES is not perfect---no survey can be---but it's design is more than sufficient to buttress itself against these dismissive criticisms of traditional public opinion polls.  One hypothesis for the pronounced bias of political polls in both 2016 and 2020 is [partisan nonresponse](https://fivethirtyeight.com/features/why-did-republicans-outperform-the-polls-again-two-theories/):  essentially, that nonresponse is highly correlated along partisan lines.  With a 1% response rate on an opt-in population, correlated nonresponse is clearly a massive problem.  I would not expect to generalize from a sample given such conditions.  Now, to what extent does this affect the ANES, with a 40% response rate drawn from a probability sample with nearly full coverage of the population?  Of course it can't be zero, but it is highly unlikely that there is a segment of the population with unique political views that could not be captured by this survey.
+
+
+## About this report
+
+I was motivated to do this analysis for two reasons.  First, I have been searching for a rich, clean, freely available, and substantively interesting dataset to use in developing a series of tutorials on [How to Analyze Data](https://czep.net/).  I will be using the ANES data in these tutorials as a way of teaching the *process of data analysis*.  Equally as important, I came to this project out of sheer desperate frustration with the state of the political climate during the 2020 election season.  As with most of us, my peers and media choices largely reflect my own views, and I have been struggling with ways to escape the filter bubble.  In trying to understand how US politics has evolved into its present hyper-partisan divide, I have been trying to find high-quality datasets that can shed light on these political differences.  For all those times I have found it inconceivable that people on the opposite side of the political spectrum have come to the conclusions they have, I finally have a dataset that can help explain why they think like they do.  I believe the ANES can greatly contribute to this understanding.  It is my hope that well-meaning people on all sides of the political fence will turn to resources like the ANES to learn why others think as they do.
+
+I am not a political scientist---my training was in sociology and I have been a data scientist for 25 years[^3], so I know my way around a set of data.  Approaching large complex surveys for the first time is daunting.  Since this will be a common task for anyone who wishes to leverage the ANES in their own analysis, I hope this document will help ease some of the laborious time required when becoming acquainted with the data.
+
+There are 1,381 variables in the current version of the ANES 2020 dataset and despite the length of this report, I am just barely scratching the surface of what there is to learn here.  I hope that some of you will be able to re-use this code to apply it to your own research topics in this highly valuable dataset.  While exploring the tabs, I highly encourage you to download the User guide as well as the actual survey questionnaire for reference.  This way you will have the full context into how the questions were asked and how the available response categories were worded.
+
+My approach to each variable is to begin with an unrecoded frequency table using the appropriate weighting variable, which in this report is primarily the full-sample pre-election weight variable `V200010a`.  I am not including unweighted tabulations because these are expected to be released with the documentation in the final release of the dataset.  The primary crosstab variable I am considering in this analysis is by the repondent's expressed vote, intended vote, or preference for either the Democratic or Republican Presidential candidate, based on the variable `V201075x`.  This crosstab is also weighted, but I remove missing values from the table (Don't know, Refused, Inapplicable, etc).  Following this I include a further demographic breakdown by voting intent along gender, age, race, and education.  The demographic breaks are hard-coded in the `demotable` function which is available in the file `anes_functions.R` and also reproduced in the appendix.  I've tried to build some modularity into this function and it should be fairly straightforward to change the demographic breaks or add additional ones if needed in your analysis.  I include a few visualizations using ggplot where I felt it would communicate better than a table.  There are still many more variables that would benefit from plotting that I have not had time to develop.  I may add to this report as time permits.
+
+In the demographic table I report the point estimate and the 95% confidence interval in parentheses below it.  The confidence intervals are calculated using srvyr's `survey_mean` function which relies on the `svyciprop` function from the survey package.  Since the ANES is not a simple random sample, variance calculations must take account of the survey design to generate accurate results.  This is well documented in the [ANES User Guide and Codebook](https://electionstudies.org/data-center/2020-time-series-study/) in the section on "Data Analysis, Weights, and Variance Estimation".  While the documentation uses Stata in most of the discussion, the same methods are available in R using survey or srvyr.  A good introduction to the topic is [Survey Data Analysis with R](https://stats.idre.ucla.edu/r/seminars/survey-data-analysis-with-r/) in the Statistical Consulting pages at UCLA.
+
+I've included confidence intervals to assist in gauging the statistical significance of the demographic breaks.  This is especially important because in some of the segments the sample sizes do get very thin.  These should be used as helpers but not as formal stat tests.  If confidence levels do not overlap, then the difference is statistically significant, but the converse is not necessarily true.  A difference may be significant even if there is some overlap in the confidence intervals[^5].
+
+This report is generated using [RMarkdown](https://cran.r-project.org/package=rmarkdown) with [knitr](https://cran.r-project.org/package=knitr), [Pandoc](https://pandoc.org/), and the [kableExtra](https://cran.r-project.org/package=kableExtra) package.  I make heavy use of the [tidyverse](https://www.tidyverse.org/).  The [haven](https://cran.r-project.org/package=haven) and [labelled](https://cran.r-project.org/package=labelled) packages enable R to easily read Stata files along with metadata such as value labels.  Procedures that require calculating standard errors (confidence intervals, t-tests, chi-squared tests, regression, etc.) must use either the [survey](https://cran.r-project.org/package=survey) or [srvyr](https://cran.r-project.org/package=srvyr) packages.
+
+The source repository for this report is [available here](https://github.com/czep/HTAD).  All code is freely usable under the terms of the MIT license; however, the analysis is my own and I ask that you do not reproduce it without contacting me first.  Please also contact me if you find any errors, obtain different results when replicating this analysis, or if you have questions about the methods I am using, or suggestions for improvement.
+
+Lastly, if I have committed crimes of omission, it is due merely to a shortage of time, not to any conscious effort to portray the results with any particular spin.  There is so much material here I cannot possibly comment on each variable.  Although I may add to it over time as I develop my tutorials, if anyone wants to contribute please open a pull request and I will consider adding to the document with a proper citation.  Do stick to the ethos of an EDA: no value judgements, merely a summary of the facts and the questions they raise that may benefit from further analysis and spark hypothesis generation.
+
+
+Now, let the fun begin!
+
+
+[^1]: The Pew Research Center, arguably one of the better research organizations, reported a [6% response rate](https://www.pewresearch.org/fact-tank/2019/02/27/response-rates-in-telephone-surveys-have-resumed-their-decline/) in 2019.  Anecdotal evidence from colleagues in market research suggests that in practice most RDD surveys will struggle to reach even 1%.
+
+[^2]: In the run-up to the November election, news media want to report what "the latest polls show".  If one survey firm promises a nationally representative probability sample of eligible US voters drawn from the USPS delivery sequence file with multiple attempts at nonresponse follow-up to achieve a 40% response rate, but it would cost several million dollars and not be ready for release for 6 months, whereas another survey firm promises an RDD survey of 1,000 people for $4,000 with a 3 day turnaround, is this even a choice?
+
+[^3]: Don't tell me that data science hasn't existed for 25 years.  And get off my lawn!
+
+[^4]: In EDA we must also be careful to avoid value judgments.  This is esepcially true with subject matter as highly polarized as this one.  Although the topic is political, the analysis must be dispassionate.  This is a scientific document, and even though it is about politics, the analysis must remain apolitical.  Without the commitment to objectivity that is the hallmark of science, our detractors will have all the evidence they need to discredit us before we can even begin.
+
+[^5]: Confidence intervals around point estimates do not take into account the joint probability distribution.  For examples of the math, see [here](https://core.ac.uk/download/pdf/82702323.pdf) and [here](https://www.cscu.cornell.edu/news/statnews/73_ci.pdf).
+
+# Environment setup
+
+```{r r_setup, eval=TRUE}
+options(scipen=9)
+
+library(tidyverse)
+library(haven)
+library(labelled)
+library(kableExtra)
+library(survey)
+library(srvyr)
+library(scales)
+
+anesfile <- "anes_timeseries_2020_stata_20210324.dta"
+
+# See appendix for complete source code
+source("anes_functions.R", local = knitr::knit_global())
+source("anes_recodes.R", local = knitr::knit_global())
+
+```
+
+# Dataset Validation
+
+In this section we perform a few checks on the dataset to ensure that counts match what is expected.  The current version of the dataset is a preliminary release, and the ANES team is continuing to validate the data, add additional summary variables, and refine the survey weights.  As a result, these values may change as additional versions of the dataset are released.
+
+## Dataset version and unweighted counts
+
+```{r r_load, eval=TRUE}
+anes <- read_dta(file = anesfile)
+anes <- anes %>% all_recodes()
+
+t1 <- anes %>% count(version)
+quicktable(t1, colnames = (c("Version", "N")), title = "Dataset version")
+
+```
+
+## Sample mode {#samplemode}
+
+Compare these counts to the reported counts on the [ANES study page](https://electionstudies.org/data-center/2020-time-series-study/).
+
+```{r r_surveymode, eval=TRUE, cache=TRUE}
+t1 <- anes %>% count(sample_mode)
+t2 <- anes %>%
+  count(sample_mode, post_complete) %>%
+  pivot_wider(names_from = post_complete, values_from = n)
+
+k1 <- quicktable(t1, colnames = c("Sample mode", "N"), align = "lc")
+k2 <- quicktable(t2, colnames = c("Sample mode", names(t2)[2:ncol(t2)]), align = "lcc")
+twintables(k1, k2)
+
+```
+
+## Weights and Survey Design
+
+Full-sample pre-election and post-election survey design objects with weights.  This report is focused on the pre-election survey, so we will use the `anespre` design object for any calculation involving standard errors.  The construction of the survey object is slightly different when using the `srvyr` package.  As an example, see the `demotable` function in the appendix.
+
+```{r r_surveydesign, eval=TRUE, cache=TRUE}
+# survey design objects
+anespre   <- svydesign(id=~V200010c, strata=~V200010d, weights=~V200010a, data=anes, nest=TRUE)
+anespost  <- svydesign(id=~V200010c, strata=~V200010d, weights=~V200010b, data=anes, nest=TRUE)
+
+t1 <- anes %>% count(sample_mode, wt = V200010a)
+t2 <- anes %>% count(sample_mode, wt = V200010b)
+
+k1 <- quicktable(t1, colnames = c("Sample mode", "N"), title = "Pre-election weighted count")
+k2 <- quicktable(t2, colnames = c("Sample mode", "N"), title = "Post-election weighted count")
+twintables(k1, k2)
+
+```
+
+Confirm that the survey design objects are also weighting correctly.
+
+```{r r_surveydesign2, eval=TRUE, cache=TRUE}
+
+t1 <- as_tibble(svytable(~sample_mode, design=anespre))
+t2 <- as_tibble(svytable(~sample_mode, design=anespost))
+
+k1 <- quicktable(t1, colnames = c("Sample mode", "N"), title = "Pre-election weighted count")
+k2 <- quicktable(t2, colnames = c("Sample mode", "N"), title = "Post-election weighted count")
+twintables(k1, k2)
+
+```
+
+
+
+# Pre-election vote/intent/preference
+
+This constructed variable is based on a series of questions asked to determine whether the respondent will likely vote for Biden or for Trump in the 2020 election.  I will use this as the primary crosstab variable throughout the remainder of this report.  This will enable us in additional analysis to formulate hypotheses about the differences between likely Biden voters and likely Trump voters.
+
+Why not skip directly to the post-election survey and use the respondent's actual vote in the election?  We could---and should---replicate all these crosstabs based on the actual post-election vote.  I decided on pre-election intent for a few reasons.  First, the pre-election dataset is a massive enough source of variables that we will not lack for interesting topics to study.  Working with the pre-election data is also easier as a first-timer to this dataset because we don't need to worry about the effect of post-election nonresponse.  Although the pre to post completion rate is quite high, as you can confirm in the [Sample mode](#samplemode) section above, there may be some issues with correlated nonresponse and I'd rather not deal with that in this first EDA.  Finally, I would also make the case that a respondent's expressed voting intent in the pre-election will be very highly correlated with their actual vote.  So, this should be a durable representation of the two sides of the 2020 electorate.
+
+One area of interest for future work is to examine how much of the variability in voting intent can be explained purely by demographics.  Note that the ANES does not provide any geographic data, not even a simple urban/suburban/rural distinction.  Still, it would be interesting to see how well we could predict voting intent based solely on age, gender, ethnicity, and education.
+
+
+```{r preintent1, eval=TRUE, cache=TRUE}
+t1 <- anes %>% count(V201075x) %>% mutate(p = n / sum(n)) %>% as_factor()
+t2 <- anes %>% count(V201075x, wt = V200010a) %>% mutate(p = n / sum(n)) %>% as_factor()
+t3 <- t1 %>% left_join(t2, by = "V201075x")
+t3$p.x <- percent(t3$p.x, accuracy = 0.01)
+t3$p.y <- percent(t3$p.y, accuracy = 0.01)
+
+quicktable(t3,
+  colnames = c("", "Unweighted N", "Unweighted %", "Weighted N", "Weighted %"),
+  title = "Vote/intent/preference",
+  align = "lrrrr"
+)
+
+```
+
+## Components
+
+Examine the relative contribution from each of the components of pre-election vote/intent/preference for both D and R.  Since early voting was possible while the pre-election survey was ongoing, some of the respondents had already voted by the time of their interview.  The vast majority of this variable is made of those who haven't yet voted but express a clear intent for whom they will vote.  Another small group did not express an intent, but did express a preference in a follow-up question for one of the candidates.
+
+
+```{r preintent2, eval=TRUE, cache=TRUE}
+
+t1 <- anes %>% count(preintent, vip, wt = V200010a) %>%
+  filter(!is.na(preintent) & !is.na(vip)) %>%
+  group_by(preintent) %>%
+  mutate(p = n / sum(n)) %>%
+  select(preintent, vip, n, p)
+
+t2 <- t1 %>%
+  pivot_wider(id_cols = vip, names_from = preintent, values_from = c(n, p)) %>%
+  mutate(p_D = percent(p_D, accuracy = 0.1), p_R = percent(p_R, accuracy = 0.1))
+
+# kable(t2,
+#   col.names = c("Component", "D Count", "R Count", "D %", "R %"),
+#   format.args = list(big.mark = ","), digits = 0, align = "lrrrr"
+# ) %>%
+#   kable_classic(full_width = FALSE, html_font = "Verdana")
+
+quicktable(t2,
+  colnames = c("Component", "D Count", "R Count", "D %", "R %"),
+  title = "Vote/intent/preference",
+  align = "lrrrr"
+)
+
+ggplot(t1, aes(x = preintent, y = p, fill = vip)) +
+    geom_bar(position = "fill",stat = "identity") +
+    scale_y_continuous(labels = scales::percent_format()) +
+    scale_color_discrete(name="Vote/intent/preference") +
+    labs(
+        title = "Components of Pre-election Vote/intent/preference",
+        subtitle = "among likely Democratic vs Republican voters",
+        x = "", y = "", fill = ""
+      ) +
+      theme(
+        plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5)
+      )
+
+```
+
+Let's do a chi-squared test to see if the difference in the distributions is significant.  As of the preliminary release, the differences are statistically significant.  Thus, we could consider limiting the analysis to the "intent" category, excluding the early voters as well as those with a preference but not an intention to vote.  The "intent" catgory is the most dominant among both D and R sides.  At this time I don't see this as a good enough reason to throw away cases.  You should always be skeptical of any analysis that removes legitimate observations from the analysis!
+
+Given the empirical results of the 2020 election that Biden voters were more likely to have voted by mail and to have voted early, to remove this group from the analysis may bias the results by excluding a dedicated segment of Biden voters.  I would argue that this variable is an adequate operationalization for distinguishing between likely Biden and likely Trump voters.  Still, let's keep the subtelty involved in this variable in mind throughout the analysis.  It may become necessary later to disentangle the 3 components, or even rely on another measure altogether---such as the actual post-election vote.
+
+For brevity, I may refer to the groups as "Biden voters" vs "Trump voters" or even just "Ds" vs "Rs" instead of the much wordier technical definition: "eligible voters who are either registered to vote or intend to register to vote prior to the election, who have either already voted for, intent to vote for, or express a preference to vote for Biden or Trump".
+
+
+```{r preintent3, eval=TRUE, cache=TRUE}
+anespre <- svydesign(id=~V200010c, strata=~V200010d, weights=~V200010a, data=anes, nest=TRUE)
+svychisq(~vip + preintent, design=subset(anespre, !is.na(preintent) & !is.na(vip)))
+```
+
+# Likability of candidates
+
+Now we enter the actual substantive questions in the survey that we will crosstab with our voting intent variable.
+
+Is there anything the respondent likes about the *Democratic* Presidential candidate?  Note that fully 17% of likely Biden voters don't actually like anything about Biden!  Wow, this is certainly one of those "Why?" moments I mentioned above.  In the demographics, we see that older Ds, whites, and college graduates are more likely to like Biden, there is noticeable hesitance among Non-whites and non-college graduates.
+
+
+```{r like1, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201106, "Like anything about the Democratic candidate")
+```
+
+Is there anything the respondent likes about the *Republican* Presidential candidate?  We can see that likely Trump voters more often report they like something about Trump (91%) than likely Biden voters for Biden (83%).  This is well sustained across gender, with older Rs even more agreeable to Trump than younger Rs.
+
+The proportion of likely Trump voters who find something they like in Biden (12%) is roughly the same as the proportion of likely Biden voters who like something about Trump.
+
+
+```{r like2, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201110, "Like anything about the Republican candidate")
+```
+
+
+
+# Dislikability of candidates
+
+Is there anything R *dislikes* about the candidates?
+
+20% of likely Biden voters find something they dislike about Biden, while 25% of likely Trump voters find something they dislike about Trump.  I would be very curious to see how this question played out in prior elections, however, merging the 2020 dataset with the ANES cumulative data file will take quite a bit of work.
+
+For likely Biden voters about Biden, the younger ones, whites, and college graduates more often find something they dislike about him.  For likely Trump voters about Trump, it's also the younger ones and college graduates but Non-whites much more so than whites.
+
+```{r dislike1, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201108, "Dislike anything about the Democratic candidate")
+```
+
+```{r dislike2, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201112, "Dislike anything about the Republican candidate")
+```
+
+
+
+
+
+# How things are going
+
+Overall, 26% of the survey population agree that things in the country are "going in the right direction".  Predictably there is a sharp partisan divide with only 4% of Biden voters supporting this statement compared to 58% of Trump voters.
+
+
+```{r howgoes1, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201114, "Are things in the country on the right track?")
+```
+
+
+## How do you feel about how things are going
+
+Next we have a series of 9 adjectives to describe how respondents feel about how things are going in the country.  There is an overwhelming amount of material in the tabs and you may simply want to skip to the [visualizations below](#howgoes3).
+
+
+```{r howgoes2, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201115, "Hopeful")
+anes %>% tabtemplate1(V201116, "Afraid")
+anes %>% tabtemplate1(V201117, "Outraged")
+anes %>% tabtemplate1(V201118, "Angry")
+anes %>% tabtemplate1(V201119, "Happy")
+anes %>% tabtemplate1(V201120, "Worried")
+anes %>% tabtemplate1(V201121, "Proud")
+anes %>% tabtemplate1(V201122, "Irritated")
+anes %>% tabtemplate1(V201123, "Nervous")
+
+```
+
+## Summary visualizations {#howgoes3}
+
+Not many US voters feel *happy* or *proud*---even among Trump voters---while a good chunk are *outraged* and *irritated*.
+
+
+
+```{r howgoes3, eval=TRUE, cache=TRUE}
+
+anes %>%
+  select(V201115:V201123, V200010a) %>%
+  howgoes_recodes() %>%
+  pivot_longer(cols = V201115:V201123, names_to = "var_name", values_to = "howfeels") %>%
+  group_by(var_name, howfeels) %>%
+  summarize(n = sum(V200010a)) %>%
+  filter(!is.na(howfeels)) %>%
+  mutate(p = n / sum(n), howfeels = as_factor(howfeels)) %>%
+  ungroup() %>%
+  mutate(
+    var_label = factor(var_name,
+      levels = c("V201115","V201116","V201117","V201118","V201119","V201120","V201121","V201122","V201123"),
+      labels = c("Hopeful","Afraid","Outraged","Angry","Happy","Worried","Proud","Irritated","Nervous")
+    )
+  ) %>%
+  ggplot(aes(x = var_label, y = p, fill = howfeels)) +
+    geom_bar(position = "fill", stat = "identity") +
+    scale_y_continuous(labels=percent) +
+    labs(
+      title = "How do you feel about how things are going in the country?",
+      x = "", y = "", fill = ""
+    ) +
+    theme(plot.title = element_text(hjust = 0.5))
+
+
+anes %>%
+  filter(!is.na(preintent)) %>%
+  select(V201115:V201123, preintent, V200010a) %>%
+  howgoes_recodes() %>%
+  pivot_longer(cols = V201115:V201123, names_to = "var_name", values_to = "howfeels") %>%
+  group_by(preintent, var_name, howfeels) %>%
+  summarize(n = sum(V200010a)) %>%
+  filter(!is.na(howfeels)) %>%
+  mutate(p = n / sum(n), howfeels = as_factor(howfeels)) %>%
+  ungroup() %>%
+  mutate(
+    var_label = factor(var_name,
+      levels = c("V201115","V201116","V201117","V201118","V201119","V201120","V201121","V201122","V201123"),
+      labels = c("Hopeful","Afraid","Outraged","Angry","Happy","Worried","Proud","Irritated","Nervous")
+    )
+  ) %>%
+  ggplot(aes(x = preintent, y = p, fill = howfeels)) +
+    geom_bar(stat = "identity", position = "fill") +
+    facet_grid(~var_label) +
+    scale_y_continuous(labels=percent) +
+    labs(
+      title = "How do you feel about how things are going in the country?",
+      subtitle = "among likely Democratic vs Republican voters",
+      x = "", y = "", fill = ""
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
+
+```
+
+
+To de-clutter the plot, let's focus only on the "Top 2 box", those who say "Extremely" or "Very", and plot that along with the 95% confidence intervals to see how the feelings of Biden voters and Trump voters are different.
+
+
+
+```{r howgoes4, eval=TRUE, cache=TRUE}
+anespre <- as_survey_design(
+  svydesign(id=~V200010c, strata=~V200010d, weights=~V200010a, data=anes, nest=TRUE)
+)
+
+t2b <- function(x) {
+  survey_mean(x >= 4, proportion = TRUE, vartype = "ci", na.rm = TRUE)
+}
+
+t1 <- anespre %>%
+  filter(!is.na(preintent)) %>%
+  group_by(preintent) %>%
+  summarize(across(V201115:V201123, t2b))
+
+t2 <- t1 %>%
+  pivot_longer(cols = -preintent, names_to = "result", values_to = "val") %>%
+  separate(result, c("var_name", "modif")) %>%
+  replace_na(list(modif = "p")) %>%
+  pivot_wider(names_from = "modif", values_from = "val") %>%
+  mutate(
+    var_label = factor(var_name,
+      levels = c("V201115","V201116","V201117","V201118","V201119","V201120","V201121","V201122","V201123"),
+      labels = c("Hopeful","Afraid","Outraged","Angry","Happy","Worried","Proud","Irritated","Nervous")
+    )
+  )
+
+ggplot(data = t2, aes(x = preintent, y = p, fill = preintent, ymax = upp, ymin = low)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(~var_label) +
+  scale_y_continuous(labels=percent) +
+  scale_fill_manual(values=polifillcolors) +
+  geom_errorbar(position = position_dodge(width = 0.9), width = 0.1) +
+  labs(
+    title = "Top 2 box - Extremely/Very - feel about how things are going in the country",
+    subtitle = "among likely Democratic vs Republican voters",
+    x = "", y = "", fill = ""
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+
+```
+
+
+# Approval ratings
+
+In this section, repondents are asked to provide their approval rating of Congress, the President on multiple issues, and COVID-19 response.  Plots for these can also be [found below](#approval2).
+
+
+```{r approval1, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201126x, "Approval of Congress handling its job")
+anes %>% tabtemplate1(V201129x, "Approval of President handling job")
+anes %>% tabtemplate1(V201132x, "Approval of President handling economy")
+anes %>% tabtemplate1(V201135x, "Approval of President handling foreign relations")
+anes %>% tabtemplate1(V201138x, "Approval of President handling health care")
+anes %>% tabtemplate1(V201141x, "Approval of President handling immigration")
+anes %>% tabtemplate1(V201144x, "Approval of President handling COVID-19")
+anes %>% tabtemplate1(V201147x, "Approval of R's governor handling COVID-19")
+anes %>% tabtemplate1(V201150x, "Approval of Local government handling COVID-19")
+```
+
+## Approval plots {#approval2}
+
+```{r approval2, eval=TRUE, cache=TRUE}
+
+t1 <- anes %>%
+  set_na_range(V201126x = c(-9,-1)) %>%
+  set_na_range(V201129x = c(-9,-1)) %>%
+  set_na_range(V201132x = c(-9,-1)) %>%
+  set_na_range(V201135x = c(-9,-1)) %>%
+  set_na_range(V201138x = c(-9,-1)) %>%
+  set_na_range(V201141x = c(-9,-1)) %>%
+  set_na_range(V201144x = c(-9,-1)) %>%
+  set_na_range(V201147x = c(-9,-1)) %>%
+  set_na_range(V201150x = c(-9,-1)) %>%
+  user_na_to_na()
+
+t1 %>% plot_approval(V201126x, "Congress handling its job")
+t1 %>% plot_approval(V201129x, "President handling job")
+t1 %>% plot_approval(V201132x, "President handling economy")
+t1 %>% plot_approval(V201135x, "President handling foreign relations")
+t1 %>% plot_approval(V201138x, "President handling health care")
+t1 %>% plot_approval(V201141x, "President handling immigration")
+t1 %>% plot_approval(V201144x, "President handling COVID-19")
+t1 %>% plot_approval(V201147x, "R's governor handling COVID-19")
+t1 %>% plot_approval(V201150x, "Local government handling COVID-19")
+
+```
+
+
+
+# Feeling thermometers
+
+Respondents are asked to rate how they feel on a numerical scale from 0 (Cold) to 100 (Hot) about the candidates and the parties.  These aren't really true continuous variables due to the fact that people are more likely to choose round numbers instead of something like "43".  However, treating these as categorical would be unwieldy, so we compute means.  Below are traditional Tukey boxplots, followed by an alternate rendering which plots the 95% confidence intervals.
+
+```{r feeltherms1, eval=TRUE, cache=TRUE}
+
+anes <- anes %>%
+  set_na_range(V201151 = c(-9,-1)) %>%
+  set_na_range(V201152 = c(-9,-1)) %>%
+  set_na_range(V201153 = c(-9,-1)) %>%
+  set_na_range(V201154 = c(-9,-1)) %>%
+  set_na_range(V201155 = c(-9,-1)) %>%
+  set_na_range(V201156 = c(-9,-1)) %>%
+  set_na_range(V201157 = c(-9,-1)) %>%
+  set_na_range(V201151 = c(998,999)) %>%
+  set_na_range(V201152 = c(998,999)) %>%
+  set_na_range(V201153 = c(998,999)) %>%
+  set_na_range(V201154 = c(998,999)) %>%
+  set_na_range(V201155 = c(998,999)) %>%
+  set_na_range(V201156 = c(998,999)) %>%
+  set_na_range(V201157 = c(998,999)) %>%
+  user_na_to_na()
+
+anes %>%
+  filter(!is.na(preintent)) %>%
+  zap_labels() %>%
+  pivot_longer(cols = V201151:V201157, names_to = "var_name", values_to = "therms") %>%
+  filter(!is.na(therms)) %>%
+  mutate(
+    var_label = factor(var_name,
+      levels = c("V201151","V201152","V201153","V201154","V201155","V201156","V201157"),
+      labels = c("Biden", "Trump", "Harris", "Pence", "Obama", "Dem Party", "Rep Party")
+    )
+  ) %>%
+  ggplot(aes(x = preintent, y = therms, weight = V200010a, colour = preintent)) +
+    geom_boxplot() +
+    scale_colour_manual(values=polilinecolors) +
+    facet_grid(~var_label) +
+    labs(
+      title = "Feeling Thermometers from 0 (Cold) to 100 (Hot)",
+      subtitle = "Traditional Boxplots",
+      x = "", y = "", fill = ""
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
+
+smean <- function(x) {
+  survey_mean(x, vartype = "ci", df=Inf, na.rm = TRUE)
+}
+
+anespre <- as_survey_design(
+  svydesign(id=~V200010c, strata=~V200010d, weights=~V200010a, data=anes, nest=TRUE)
+)
+t1 <- anespre %>%
+  filter(!is.na(preintent)) %>%
+  group_by(preintent) %>%
+  summarize(across(V201151:V201157, smean))
+
+t2 <- t1 %>%
+  pivot_longer(cols = -preintent, names_to = "result", values_to = "val") %>%
+  separate(result, c("var_name", "modif")) %>%
+  replace_na(list(modif = "p")) %>%
+  pivot_wider(names_from = "modif", values_from = "val") %>%
+  mutate(
+    var_label = factor(var_name,
+      levels = c("V201151","V201152","V201153","V201154","V201155","V201156","V201157"),
+      labels = c("Biden", "Trump", "Harris", "Pence", "Obama", "Dem Party", "Rep Party")
+    )
+  )
+
+ggplot(data=t2, aes(x=preintent, y=p, colour=preintent)) +
+  geom_point() +
+  geom_crossbar(aes(ymin=low, ymax=upp), width=0.8) +
+  scale_y_continuous() +
+  scale_colour_manual(values=polilinecolors) +
+    facet_grid(~var_label) +
+    labs(
+      title = "Feeling Thermometers from 0 (Cold) to 100 (Hot)",
+      subtitle = "95% Confidence Interval Boxplots",
+      x = "", y = "", fill = ""
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
+
+```
+
+
+# Likeability about political parties
+
+
+```{r partylike1, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201158, "Like anything about the Democratic party")
+```
+
+```{r partylike2, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201162, "Like anything about the Republican party")
+```
+
+
+
+# Dislikability of political parties
+
+Is there anything R *dislikes* about the Democratic/Republican party?
+
+```{r partydislike1, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201160, "Dislike anything about the Democratic party")
+```
+
+```{r partydislike2, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201164, "Dislike anything about the Republican party")
+```
+
+
+
+# Liberal-Conservative 7-point scale
+
+```{r libconscale1, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201200, "Self-placement on a 7-point scale")
+```
+
+```{r libconscale2, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201202, "Democratic Presidential candidate on a 7-point scale")
+```
+
+```{r libconscale3, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201203, "Republican Presidential candidate on a 7-point scale")
+```
+
+```{r libconscale4, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201206, "Democratic party on a 7-point scale")
+```
+
+```{r libconscale5, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201207, "Republican party on a 7-point scale")
+```
+
+
+# Traits of candidates
+
+```{r traits1, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201208, "Biden: Strong leadership")
+```
+
+```{r traits2, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201209, "Biden: Really cares")
+```
+
+```{r traits3, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201210, "Biden: Knowledgeable")
+```
+
+```{r traits4, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201211, "Biden: Honest")
+```
+
+
+```{r traits5, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201212, "Trump: Strong leadership")
+```
+
+```{r traits6, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201213, "Trump: Really cares")
+```
+
+```{r traits7, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201214, "Trump: Knowledgeable")
+```
+
+```{r traits8, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201215, "Trump: Honest")
+```
+
+
+```{r traits_plots, eval=TRUE, cache=TRUE}
+anes <- anes %>%
+  set_na_range(V201208 = c(-9,-1)) %>%
+  set_na_range(V201209 = c(-9,-1)) %>%
+  set_na_range(V201210 = c(-9,-1)) %>%
+  set_na_range(V201211 = c(-9,-1)) %>%
+  set_na_range(V201212 = c(-9,-1)) %>%
+  set_na_range(V201213 = c(-9,-1)) %>%
+  set_na_range(V201214 = c(-9,-1)) %>%
+  set_na_range(V201215 = c(-9,-1)) %>%
+  user_na_to_na()
+
+anespre <- as_survey_design(
+  svydesign(id=~V200010c, strata=~V200010d, weights=~V200010a, data=anes, nest=TRUE)
+)
+
+t2b <- function(x) {
+  survey_mean(x <= 2, proportion = TRUE, vartype = "ci", na.rm = TRUE)
+}
+
+
+### Biden
+t1 <- anespre %>%
+  filter(!is.na(preintent)) %>%
+  group_by(preintent) %>%
+  summarize(across(V201208:V201211, t2b))
+
+
+t2 <- t1 %>%
+  pivot_longer(cols = -preintent, names_to = "result", values_to = "val") %>%
+  separate(result, c("var_name", "modif")) %>%
+  replace_na(list(modif = "p")) %>%
+  pivot_wider(names_from = "modif", values_from = "val") %>%
+  mutate(
+    var_label = factor(var_name,
+      levels = c("V201208","V201209","V201210","V201211"),
+      labels = c("Strong leadership","Really cares","Knowledgeable","Honest")
+    )
+  )
+
+ggplot(data = t2, aes(x = preintent, y = p, fill = preintent, ymax = upp, ymin = low)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(~var_label) +
+  scale_y_continuous(labels=percent) +
+  scale_fill_manual(values=polifillcolors) +
+  geom_errorbar(position = position_dodge(width = 0.9), width = 0.1) +
+  labs(
+    title = "Extremely/Very - feel about Joe Biden",
+    subtitle = "among likely Democratic vs Republican voters",
+    x = "", y = "", fill = ""
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+
+### Trump
+t1 <- anespre %>%
+  filter(!is.na(preintent)) %>%
+  group_by(preintent) %>%
+  summarize(across(V201212:V201215, t2b))
+
+
+t2 <- t1 %>%
+  pivot_longer(cols = -preintent, names_to = "result", values_to = "val") %>%
+  separate(result, c("var_name", "modif")) %>%
+  replace_na(list(modif = "p")) %>%
+  pivot_wider(names_from = "modif", values_from = "val") %>%
+  mutate(
+    var_label = factor(var_name,
+      levels = c("V201212","V201213","V201214","V201215"),
+      labels = c("Strong leadership","Really cares","Knowledgeable","Honest")
+    )
+  )
+
+ggplot(data = t2, aes(x = preintent, y = p, fill = preintent, ymax = upp, ymin = low)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(~var_label) +
+  scale_y_continuous(labels=percent) +
+  scale_fill_manual(values=polifillcolors) +
+  geom_errorbar(position = position_dodge(width = 0.9), width = 0.1) +
+  labs(
+    title = "Extremely/Very - feel about Donald Trump",
+    subtitle = "among likely Democratic vs Republican voters",
+    x = "", y = "", fill = ""
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+
+
+```
+
+
+# Election outcome
+
+```{r elecoutcome1, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201216, "How much do you care who wins the Presidential election?")
+```
+
+
+```{r elecoutcome2, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(elec_outcome, "Who will win the election?")
+```
+
+# Voting
+
+
+## Duty or choice
+
+```{r duty1, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201225x, "Is voting a duty or a choice?")
+```
+
+
+
+## Split ticket voting
+
+
+```{r stv1, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201226, "Will you vote straight-party ticket?")
+```
+
+
+
+## Party control
+
+```{r partycontrol1, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201227, "Party control or split government")
+```
+
+## Party identity
+
+
+```{r partyid1, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201231x, "Party identity")
+```
+
+
+```{r partyid2, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201232, "Party identity importance")
+```
+
+
+# Attitudes about government
+
+
+```{r attgov1, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201233, "Trust government in Washington")
+```
+
+```{r attgov2, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201234, "Government for a few interests or benefit of all")
+```
+
+```{r attgov3, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201235, "Does government waste much tax money")
+```
+
+```{r attgov4, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201236, "How many in government are corrupt")
+```
+
+```{r attgov5, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201237, "How often can people be trusted")
+```
+
+```{r attgov6, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201238, "Elections make government pay attention")
+```
+
+
+
+
+# Which party better
+
+```{r whichparty1, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201239, "Better at handling nation's economy")
+```
+
+```{r whichparty2, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201240, "Better at handling health care")
+```
+
+```{r whichparty3, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201241, "Better at handling immigration")
+```
+
+```{r whichparty4, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201242, "Better at handling taxes")
+```
+
+```{r whichparty5, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201243, "Better at handling environment")
+```
+
+```{r whichparty6, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201244, "Better at handling COVID-19")
+```
+
+
+
+
+
+# Federal budget spending
+
+```{r fedbudget1, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201302x, "Spending: Social Security")
+```
+
+
+```{r fedbudget2, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201305x, "Spending: Public schools")
+```
+
+
+```{r fedbudget3, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201308x, "Spending: Tightening border security")
+```
+
+
+```{r fedbudget4, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201311x, "Spending: Dealing with crime")
+```
+
+
+```{r fedbudget5, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201314x, "Spending: Welfare programs")
+```
+
+
+```{r fedbudget6, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201317x, "Spending: Building and repairing highways")
+```
+
+
+```{r fedbudget7, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201320x, "Spending: Aid to the poor")
+```
+
+
+```{r fedbudget8, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201323x, "Spending: Protecting the environment")
+```
+
+
+# Economy
+
+```{r econ1, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201324, "Is the current economy good or bad")
+```
+
+```{r econ2, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201327x, "National economy better or worse in last year")
+```
+
+```{r econ3, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201330x, "Economy better or worse in next 12 months")
+```
+
+```{r econ4, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201333x, "Unemployment better or worse in last year")
+```
+
+```{r econ5, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201334, "More or less unemployment in next year")
+```
+
+```{r econ6, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201335, "How worried about national economy")
+```
+
+```{r econ7, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201397, "Income gap today more or less than 20 years ago")
+```
+
+```{r econ8, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201400x, "How much larger is income gap today")
+```
+
+```{r econ9, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201502, "How much better or worse off financially than 1 year ago")
+```
+
+```{r econ10, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201503, "How much better or worse off financially next year")
+```
+
+
+
+
+
+# Abortion
+
+```{r abort1, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201336, "Abortion: Self-placement")
+```
+
+```{r abort2, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201337, "Importance of abortion issue")
+```
+
+```{r abort3, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201338, "Abortion: Democratic Presidential candidate placement")
+```
+
+```{r abort4, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201339, "Abortion: Republican Presidential candidate placement")
+```
+
+```{r abort5, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201342x, "Abortion rights Supreme Court")
+```
+
+
+
+## Death penalty
+
+```{r deathpen1, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201345x, "Favor/oppose death penalty")
+```
+
+
+
+# International relations
+
+```{r intrel1, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201346, "US position in the world")
+```
+
+```{r intrel2, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201349x, "Country would be better off if we just stayed home")
+```
+
+```{r intrel3, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201350, "Use military force to solve international problems")
+```
+
+
+# Voting rights and restrictions
+
+```{r voterights1, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201351, "Votes counted accurately")
+```
+
+```{r voterights2, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201352, "Trust election officials")
+```
+```{r voterights3, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201353, "How often people denied right to vote")
+```
+```{r voterights4, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201356x, "Favor/oppose vote by mail")
+```
+```{r voterights5, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201359x, "Favor/oppose requiring ID when voting")
+```
+```{r voterights6, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201362x, "Favor/oppose allowing felons to vote")
+```
+```{r voterights7, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201363, "Does R's state ask for ID to vote")
+```
+```{r voterights8, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201364, "Is R required to show photo ID to vote")
+```
+
+```{r voterights9, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201365, "Options for election if COVID-19 continues")
+```
+
+
+
+# Importance to democracy
+
+```{r impdemocracy1, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201366, "How important that news organizations free to criticize")
+```
+```{r impdemocracy2, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201367, "How important branches of government keep one another from too much power")
+```
+```{r impdemocracy3, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201368, "How important elected officials face serious consequences for misconduct")
+```
+```{r impdemocracy4, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201369, "How important that people agree on basic facts")
+```
+
+```{r impdemocracy5, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201372x, "Helpful/harmful if Pres didn't have to worry about congress/courts")
+```
+```{r impdemocracy6, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201375x, "Favor or oppose restricting journalist access")
+```
+```{r impdemocracy7, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201376, "How concerned government might undermine media")
+```
+```{r impdemocracy8, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201377, "How much trust in news media")
+```
+```{r impdemocracy9, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201378, "Appropriate/inappropriate Pres ask foreign countries to investigate rivals")
+```
+```{r impdemocracy10, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201379, "Prefer government official who compromises or sticks to principles")
+```
+```{r impdemocracy11, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201427, "How important to speak English in US")
+```
+
+
+# Trump impeachment
+
+```{r impeach1, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201382x, "Corruption increased or decreased since Trump")
+```
+```{r impeach2, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201383, "Did Trump ask Ukraine to investigate rivals")
+```
+```{r impeach3, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201386x, "Favor or oppose House impeachment decision")
+```
+```{r impeach4, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201389x, "Favor or oppose Senate acquittal decision")
+```
+```{r impeach5, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201428, "Likelihood of Russian interference in upcoming election")
+```
+
+
+# COVID-19 policy
+
+```{r covidpolicy1, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201392x, "Federal government response to COVID-19")
+```
+```{r covidpolicy2, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201393, "Limits placed on public activity due to COVID-19 too strict or not")
+```
+```{r covidpolicy3, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201396x, "Re-opening too quickly or too slowly")
+```
+```{r covidpolicy4, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201592, "Put off checkup and vaccines")
+```
+
+
+
+
+# Climate change
+
+```{r climate1, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201401, "Government action about rising temperature")
+```
+```{r climate2, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201402, "Government action about rising temperature - strength")
+```
+
+
+# Family and Same sex policy
+
+```{r family1, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201405x, "Require employers to offer paid leave to parents of new children")
+```
+
+```{r family2, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201408x, "Services to same sex couples")
+```
+```{r family3, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201411x, "Transgender policy")
+```
+```{r family4, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201414x, "Favor/oppose laws protect gays lesbians against job discrimination")
+```
+```{r family5, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201415, "Should gay and lesbian couples be allowed to adopt")
+```
+```{r family6, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201416, "Position on gay marriage")
+```
+
+
+# Immigration policy
+
+```{r immigpolicy1, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201417, "US government policy toward unauthorized immigrants")
+```
+```{r immigpolicy2, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201420x, "Favor or oppose ending birthright citizenship")
+```
+```{r immigpolicy3, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201423x, "Should children brought illegally be sent back or allowed to stay")
+```
+```{r immigpolicy4, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201426x, "Favor or oppose building a wall on border with Mexico")
+```
+
+
+# Protests
+
+```{r protest1, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201429, "Best way to deal with urban unrest")
+```
+
+```{r protest2, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201432x, "Protestors actions been mostly violent or peaceful")
+```
+
+
+
+# Religion
+
+```{r relig1, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201433, "Is religion important part of R life")
+anes %>% tabtemplate1(V201434, "Is Bible word of God or men")
+anes %>% tabtemplate1(V201435, "What is present religion of R")
+anes %>% tabtemplate1(V201436, "If R has no particular religion does R mean atheist or agnostic")
+anes %>% tabtemplate1(V201452, "Ever attend church or religious services")
+anes %>% tabtemplate1(V201459, "Does R consider self a religious fundamentalist or evangelical")
+anes %>% tabtemplate1(V201462, "Religious identification")
+
+```
+
+
+# Survey meta-questions
+
+```{r surveymeta1, results='asis', eval=TRUE, cache=TRUE}
+anes %>% tabtemplate1(V201649, "R rating of interview")
+anes %>% tabtemplate1(V201650, "How often took survey seriously")
+anes %>% tabtemplate1(V201651, "How satisfied is R with life")
+
+```
+
+
+# Demographics
+
+## Source demographic variables
+
+```{r demos1, results='asis', eval=TRUE, cache=TRUE}
+
+anes %>% quicktab(V201507x, "Age")
+anes %>% quicktab(V201600, "Gender")
+anes %>% quicktab(V201546, "Are you Spanish, Hispanic, or Latino")
+anes %>% quicktab(V201549x, "Self-identified race/ethnicity")
+anes %>% quicktab(V201511x, "Highest Level of Education")
+
+```
+
+##  Additional demographics
+
+```{r demos2, results='asis', eval=TRUE, cache=TRUE}
+
+anes %>% tabtemplate1(V201501, "Living with how many family members")
+anes %>% tabtemplate1(V201508, "Marital status")
+anes %>% tabtemplate1(V201509, "Domestic partnership status")
+anes %>% tabtemplate1(V201514x, "Spouse/partner: Highest Level of Education")
+anes %>% tabtemplate1(V201516, "Armed forces active duty")
+anes %>% tabtemplate1(V201517, "Worked for pay last week")
+anes %>% tabtemplate1(V201529, "Describe employment")
+anes %>% tabtemplate1(V201542, "Spouse partner working status")
+anes %>% tabtemplate1(V201544, "Anyone in HH belong to labor union")
+
+anes %>% tabtemplate1(V201553, "Native status of parents")
+anes %>% tabtemplate1(V201555, "How many grandparents born outside the US")
+anes %>% tabtemplate1(V201567, "How many children in HH age 0-17")
+anes %>% tabtemplate1(V201569, "Does R use Internet at home")
+anes %>% tabtemplate1(V201590, "Have passport")
+
+```
+
+## Demographic recodes
+
+```{r demos3, results='asis', eval=TRUE, cache=TRUE}
+
+anes %>% quicktab(V201600, "Gender")
+anes %>% quicktab(agegen, "Age and Gender")
+anes %>% quicktab(race, "Race")
+anes %>% quicktab(collgrad, "College Grad")
+
+
+```
+
+
+
+# Appendix
+
+## Source code
+
+### anes_functions.R
+
+```{r app_functions, code = readLines("anes_functions.R"), eval=FALSE}
+```
+
+### anes_recodes.R
+
+```{r app_recodes, code = readLines("anes_recodes.R"), eval=FALSE}
+```
+
+### Session info
+
+```{r session_info, eval=TRUE, cache=FALSE}
+sessionInfo()
+```
+
